@@ -1,0 +1,11 @@
+.venv/
+.venv-kraken/
+__pycache__/
+*.pyc
+models/kraken/*.mlmodel
+models/kraken/**/*.mlmodel
+smoke/**/raw/
+*.log
+.DS_Store
+archive/
+dist/*.tar.gz.bak

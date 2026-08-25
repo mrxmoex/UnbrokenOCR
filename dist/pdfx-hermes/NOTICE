@@ -1,0 +1,36 @@
+pdfx-hermes
+Copyright (c) 2026 m (MrxHermesx) and contributors
+Built with Hermes Agent (Nous Research) — CONTROL/composer fleet support
+
+================================================================================
+NOTICE — licenses for this package and third-party components
+================================================================================
+
+pdfx wrapper code (pdfx.py, pdfx-batch-fraktur.sh, pdfx_metrics.py, INSTALL.sh,
+skill markdown, and package documentation authored for this distribution)
+is released under the MIT License. See LICENSE.
+
+Third-party software invoked or optionally used by pdfx remains under its own
+licenses. This package does **not** relicense those projects. Operators who
+install optional runtimes accept those upstream terms.
+
+Key third-party components (not exhaustive — see ATTRIBUTION.md and
+DEPENDENCIES.md):
+
+  • PyMuPDF (pymupdf)     — GNU AGPL v3.0, or commercial license from Artifex
+  • Tesseract OCR         — Apache License 2.0
+  • tessdata language data (incl. frk) — Apache License 2.0 (upstream tessdata)
+  • OCRmyPDF              — Mozilla Public License 2.0 (MPL-2.0)
+  • Poppler (pdftoppm)    — GPL-2.0 or GPL-3.0 (distribution-dependent)
+  • marker-pdf (optional) — Apache License 2.0 (datalab-to/marker)
+  • Kraken HTR (optional) — Apache License 2.0 (engine); model weights vary
+
+Fraktur specimen charts (glyph templates) are third-party foundry/font samples
+used as **reference-only**. Default public tarballs ship INDEX.md only — not
+the image binaries — unless redistribution of each specimen is cleared.
+
+Control-corpus books (e.g. historical works accessed via Google Books /
+Internet Archive) are used for quality gates and methodology notes only.
+They are **not** redistributed in this package.
+
+For full credits and methodology, see ATTRIBUTION.md.

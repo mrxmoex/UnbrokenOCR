@@ -1,0 +1,99 @@
+{
+  "table_of_contents": [
+    {
+      "title": "FreeToken: Efficient Edge-Native MoE Serving with\nBandwidth-Adaptive Execution",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          85.87549781799316,
+          77.39963722229004
+        ],
+        [
+          525.5227661132812,
+          77.39963722229004
+        ],
+        [
+          525.5227661132812,
+          120.02178955078125
+        ],
+        [
+          85.87549781799316,
+          120.02178955078125
+        ]
+      ]
+    },
+    {
+      "title": "1 Introduction",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          68.42559242248535,
+          442.0301055908203
+        ],
+        [
+          166.45487594604492,
+          442.0301055908203
+        ],
+        [
+          166.45487594604492,
+          458.92218017578125
+        ],
+        [
+          68.42559242248535,
+          458.92218017578125
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          187
+        ],
+        [
+          "Line",
+          49
+        ],
+        [
+          "Text",
+          9
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "PageFooter",
+          2
+        ],
+        [
+          "PageHeader",
+          1
+        ],
+        [
+          "Footnote",
+          1
+        ],
+        [
+          "Reference",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/2608.16157"
+}
