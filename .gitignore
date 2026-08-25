@@ -9,3 +9,10 @@ smoke/**/raw/
 .DS_Store
 archive/
 dist/*.tar.gz.bak
+# house-only glyph specimens (license unclear for public git; INDEX stays)
+references/fraktur-templates/*.jpg
+references/fraktur-templates/*.jpeg
+references/fraktur-templates/*.png
+# local noise
+.env
+*.egg-info/

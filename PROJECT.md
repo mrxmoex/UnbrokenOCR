@@ -5,7 +5,7 @@
 
 **Project name:** UnbrokenOCR  
 **CLI:** `pdfx`  
-**Version (package):** 0.3.0  
+**Version (package):** 0.3.1  
 **Authors:** m (MrxHermesx) · Hermes Agent fleet (under human direction)  
 **License (wrapper):** MIT — see `dist/pdfx-hermes/LICENSE` + `ATTRIBUTION.md`  
 **Policy:** **Do not push into hermes-agent upstream until absolute bulletproof** (human gate).

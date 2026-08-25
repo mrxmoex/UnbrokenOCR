@@ -1,12 +1,6 @@
-# HOLD — no hermes-agent upstream push
+# HOLD — no hermes-agent / Nous upstream
 
-**UnbrokenOCR / pdfx-hermes is NOT cleared for hermes-agent PR or public Hermes catalog.**
+**OK:** push WIP to **mrxmoex** GitHub (`origin` on this repo).  
+**NOT OK yet:** PR or drop into **hermes-agent** / Nous catalog until human says **absolute bulletproof**.
 
-Human gate (m / MrxHermesx): wait until **absolute bulletproof**.
-
-Local staging only:
-
-- `~/.hermes/hermes-agent/optional-skills/productivity/pdfx/` — draft, not upstream
-- House skill `pdf-extract-ocr` — local CONTROL only
-
-When cleared: open PR deliberately; do not auto-push from agents.
+UnbrokenOCR stays a work-in-progress on our shelf first.
