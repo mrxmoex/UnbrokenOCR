@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": 1,
+      "url": "https://github.com/chreul/19th-century-fraktur-OCR",
+      "title": "chreul/19th-century-fraktur-OCR",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 2,
+      "url": "https://raw.githubusercontent.com/chreul/19th-century-fraktur-OCR/master/README.md",
+      "title": "README.md",
+      "accessed": "2026-08-25",
+      "quotes": [
+        {
+          "text": "All models were trained on and should be applied to binary data since this showed the best results during evaluation (see [1]).",
+          "added": "2026-08-25"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "url": "https://raw.githubusercontent.com/chreul/19th-century-fraktur-OCR/master/LICENSE",
+      "title": "LICENSE (MIT)",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 4,
+      "url": "https://arxiv.org/abs/1810.03436",
+      "title": "Reul et al. 2018 Fraktur OCR (arXiv:1810.03436)",
+      "accessed": "2026-08-25",
+      "quotes": [
+        {
+          "text": "on average reducing ABBYYs character error rate (CER) by over 70%, resulting in an average CER below 1%.",
+          "added": "2026-08-25"
+        },
+        {
+          "text": "All models were trained on and should be applied to binary data since this showed the best results during evaluation",
+          "added": "2026-08-25"
+        },
+        {
+          "text": "The self-trained Calamari models achieve the best results, outperforming ABBYY by 70% without voting and even by 78% with voting averaged over all 20 datasets yielding an average CER below 1%.",
+          "added": "2026-08-25"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "url": "https://arxiv.org/pdf/1810.03436.pdf",
+      "title": "Reul et al. 2018 PDF",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 6,
+      "url": "https://arxiv.org/abs/1809.05501",
+      "title": "Springmann et al. 2018 GT4HistOCR (arXiv:1809.05501)",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 7,
+      "url": "https://arxiv.org/pdf/1809.05501.pdf",
+      "title": "Springmann et al. 2018 PDF",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 8,
+      "url": "https://github.com/Calamari-OCR/calamari_models",
+      "title": "Calamari-OCR/calamari_models",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 9,
+      "url": "https://github.com/Calamari-OCR/calamari_models/issues/3",
+      "title": "calamari_models issue #3 fraktur19",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 10,
+      "url": "https://github.com/Calamari-OCR/calamari",
+      "title": "Calamari-OCR/calamari",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 11,
+      "url": "https://github.com/Calamari-OCR/calamari/releases",
+      "title": "Calamari releases",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 12,
+      "url": "https://github.com/ocropus/ocropy",
+      "title": "ocropus/ocropy (archived)",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 13,
+      "url": "https://zenodo.org/records/1344132",
+      "title": "GT4HistOCR Zenodo",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 14,
+      "url": "https://github.com/jze/ocropus-model_fraktur",
+      "title": "jze/ocropus-model_fraktur",
+      "accessed": "2026-08-25"
+    }
+  ]
+}

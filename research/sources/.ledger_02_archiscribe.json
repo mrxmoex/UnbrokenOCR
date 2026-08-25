@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": 1,
+      "url": "https://github.com/jbaiter/archiscribe-corpus",
+      "title": "jbaiter/archiscribe-corpus (GitHub)",
+      "accessed": "2026-08-25",
+      "quotes": [
+        {
+          "text": "Currently the corpus contains 4255 lines from 112 works published across 73 years.",
+          "added": "2026-08-25"
+        },
+        {
+          "text": "The goal is to have as much diverse OCR ground truth for 19th Century German prints as possible.",
+          "added": "2026-08-25"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "url": "https://github.com/jbaiter/archiscribe",
+      "title": "jbaiter/archiscribe transcription app",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 3,
+      "url": "https://arxiv.org/pdf/1809.05501",
+      "title": "Springmann et al. 2018 GT4HistOCR (arXiv PDF)",
+      "accessed": "2026-08-25",
+      "quotes": [
+        {
+          "text": "Only the Archiscribe corpus of 19th century German Fraktur is directly usable for OCR model train-",
+          "added": "2026-08-25"
+        },
+        {
+          "text": "While the actual OCR output of this engine for text with Fraktur typefaces is of very low quality, the resulting line segmentation is usually fairly accurate.",
+          "added": "2026-08-25"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "url": "https://jlcl.org/article/view/220",
+      "title": "JLCL 33(1) Ground Truth Fraktur/Latin",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 5,
+      "url": "https://zenodo.org/records/1344132",
+      "title": "GT4HistOCR Zenodo record",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 6,
+      "url": "https://creativecommons.org/licenses/by/4.0",
+      "title": "CC BY 4.0",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 7,
+      "url": "http://www.deutschestextarchiv.de/doku/basisformat/transkription.html",
+      "title": "DTA transcription guidelines",
+      "accessed": "2026-08-25"
+    },
+    {
+      "id": 8,
+      "url": "https://github.com/Calamari-OCR/calamari_models/issues/3",
+      "title": "Calamari fraktur models cite archiscribe",
+      "accessed": "2026-08-25"
+    }
+  ]
+}

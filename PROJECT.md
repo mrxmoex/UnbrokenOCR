@@ -1,6 +1,7 @@
 # UnbrokenOCR
 
-> Fraktur looks broken. This stack is not.
+> Fraktur = (Knochen‑)Bruch in German — broken script vs Antiqua, not “looks messy.”
+> UnbrokenOCR: the pipeline that doesn’t snap on blackletter.
 
 **Project name:** UnbrokenOCR  
 **CLI:** `pdfx`  
@@ -22,7 +23,8 @@ Local-first PDF/image extraction for agents and humans:
 
 ## Why the name
 
-UnbrokenOCR — because blackletter print is the classic “broken” type; the joke is the pipeline that finally treats it as a first-class, quality-gated route instead of hoping the embedded layer is fine.
+**Fraktur** (German): literally *break/fracture* (cf. Knochenbruch) — historically the “broken” script family vs round Antiqua, **not** “it looks broken/messy.”  
+**UnbrokenOCR** — playful counter: blackletter is Fraktur; the *pipeline* stays unbroken (quality gates, no silent garbage index).
 
 ## Layout
 
