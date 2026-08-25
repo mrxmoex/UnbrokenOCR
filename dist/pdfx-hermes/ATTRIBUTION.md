@@ -1,4 +1,4 @@
-# ATTRIBUTION — pdfx-hermes 0.3.0
+# ATTRIBUTION — pdfx-hermes 0.3.1
 
 Honest credits for code, platforms, runtimes, optional tools, reference
 materials, and gate methodology. Fellows redistributing or building on this
@@ -121,6 +121,22 @@ Summary for operators: `skill/references/CONTROL_GATES.md`.
 | `references/INFOGRAPHICS.md` | Plates / figures / vision workflow |
 | `skill/references/CONTROL_GATES.md` | Gate A/B/C summary |
 
+
+## Research cluster (Fraktur GT / models — not shipped)
+
+UnbrokenOCR’s eval and diplomatic-text policies were strengthened after reviewing
+the 2018 open historical OCR cluster (citations only; **no weights or GT in this tarball**):
+
+| Work | Credit | License | Use in UnbrokenOCR |
+|------|--------|---------|-------------------|
+| GT4HistOCR — Springmann, Reul, Dipper, Baiter (arXiv:1809.05501) | Authors + Zenodo CC-BY-4.0 GT | CC-BY-4.0 (GT) | Line-GT eval culture; transcription-policy honesty |
+| archiscribe-corpus — Johannes Baiter et al. | https://github.com/jbaiter/archiscribe-corpus | CC-BY-4.0 | Optional CER microbench; long‑s diplomatic samples |
+| 19th-century-fraktur-OCR — Reul et al. | https://github.com/chreul/19th-century-fraktur-OCR | MIT (repo) | Cite only; optional future Calamari track |
+| Reul et al. SOTA Fraktur (arXiv:1810.03436) | Authors | arXiv | Evidence mixed real-data models beat synthetic-only |
+
+House notes: `research/SYNTHESIS_three_sources.md`, `research/STRENGTHS_ADOPTED.md`.
+
+
 ## Version
 
-Attribution for **pdfx-hermes 0.3.0** (2026-08-25).
+Attribution for **pdfx-hermes 0.3.1** (2026-08-25).

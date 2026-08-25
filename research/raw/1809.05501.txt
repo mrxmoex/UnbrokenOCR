@@ -1,0 +1,724 @@
+Ground Truth for training OCR engines on
+historical documents in German Fraktur and
+             Early Modern Latin
+
+                        Uwe Springmann
+              Ludwig-Maximilians-Universität München
+                     uwe@springmann.net
+                          Christian Reul
+                       Universität Würzburg
+                christian.reul@uni-wuerzburg.de
+                             Stefanie Dipper
+                         Ruhr-Universität Bochum
+                      dipper@linguistics.rub.de
+                             Johannes Baiter
+                  Bayerische Staatsbibliothek München
+                      baiter@bsb-muenchen.de
+
+
+
+   In this paper we describe a dataset of German and Latin ground truth (GT) for histor-
+ical OCR in the form of printed text line images paired with their transcription. This
+dataset, called GT4HistOCR, consists of 313,173 line pairs covering a wide period of
+printing dates om incunabula om the 15th century to 19th century books printed
+in Fraktur types and is openly available under a CC-BY ⒋0 license. The special form
+of GT as line image/transcription pairs makes it directly usable to train state-of-the-art
+recognition models for OCR so ware employing recurring neural networks in LSTM
+architecture such as Tesseract 4 or OCRopus. We also provide some pretrained OCRo-
+pus models for subcorpora of our dataset yielding between 95% (early printings) and
+98% (19th century Fraktur printings) character accuracy rates on unseen test cases, a
+Perl script to harmonize GT produced with diﬀerent transcription guidelines, and give
+hints on how to construct GT for OCR purposes which has requirements that may
+diﬀer om linguistically motivated transcriptions.
+2                                 Springmann, Reul, Dipper, Baiter
+
+
+1 Introduction
+
+The conversion of scanned images of printed historical documents into electronic text by means of
+OCR has recently made excellent progress, regularly yielding character recognition rates by indi-
+vidually trained models beyond 98% for even the earliest printed books (Springmann, Fink, and
+Schulz, 2015; Springmann and Fink, 2016; Springmann and Lüdeling, 2017; Springmann, Fink,
+and Schulz, 2016; Reul, Dittrich, and Gruner, 2017; Reul et al., 2017; Reul et al., 2018, see also this
+volume). This is due to ⑴ the application of recurrent neural networks with LSTM architecture
+to the ﬁeld of OCR (Fischer et al., 2009; Breuel et al., 2013; Ul-Hasan and Breuel, 2013), ⑵ the
+availability of open source OCR engines which can be trained on speciﬁc scripts and fonts such as
+Tesseract¹ and OCRopus,² and ⑶ the possibility to train recognition models on real printed text
+lines as opposed to generating artiﬁcal line images om existing computer fonts (Breuel et al., 2013;
+Springmann et al., 2014).
+
+What is missing, however, are robust pretrained recognition models applicable to a wide range of
+typographies spanning diﬀerent fonts (such as Antiqua and Fraktur with long s), scripts and publica-
+tion periods, which would yield a tolerable OCR result of >95% character recognition rate without
+the need of any speciﬁc training. Accurate ground truth and better individual OCR models could
+be constructed om the output of these pretrained models much more easily than by transcriptions
+  om scratch. The feasibility to construct such mixed models able to generalize to previously unseen
+books that have not contributed to model training has been shown in Springmann and Lüdeling
+(2017) with diachronic German Fraktur printings (compare their Fig. 6 and Fig. 7): Character
+recognition rates of individual models quickly fall below 80% when applied to books printed with
+diﬀerent fonts at diﬀerent periods, whereas mixed models show an average rate of 95% (see their
+Table 2).
+
+The construction of pretrained mixed models crucially depends on available ground truth data for a
+wide variety of historical documents. In this paper we describe training material of historical ground
+truth which has been collected and produced by us over the course of several years. The training of
+OCRopus models is described in detail in the CIS workshop on historical OCR³ and the OCRoCIS
+tutorial.⁴
+
+All of our ground truth is made available in the GT4HistOCR (Ground Truth for Historical OCR)
+dataset under a CC-BY ⒋0 license in Zenodo (Springmann et al., 2018). The repository contains
+the compressed subcorpora, some pretrained mixed OCRopus models for subcorpora, and a Perl
+script which can be adapted to harmonize GT produced by diﬀerent transcriptions guidelines in
+order to have a common pool of training data for mixed models.
+
+In the following we describe our GT4HistOCR dataset and its constituent subcorpora (Sect. 2),
+mention other existing sources of historical GT which have not yet been mined for model construc-
+tion (Sect. 3) together with a description of a crowdsourcing tool for GT production using public
+    ¹https://github.com/tesseract-ocr/tesseract/wiki/Training-Tesseract
+    ²https://github.com/tmbdev/ocropy/wiki
+    ³http://www.cis.uni-muenchen.de/ocrworkshop/program.html
+    ⁴http://cistern.cis.lmu.de/ocrocis/tutorial.pdf
+       Ground Truth for training OCR engines on Early Modern Latin and German Fraktur              3
+
+
+
+Table 1: Overview of the subcorpora of GT4HistOCR. For each subcorpus we indicate the number
+         of books, the printing period, the number of lines, and the language.
+        Sect.   Subcorpus                    # Books         Period    # Lines    Language
+         ⒊1     Reference Corpus ENHG               9    1476-1499      24,766       ger
+         ⒊2     Kallimachos Corpus                  9    1487-1509      20,929     ger, lat
+         ⒊3     Early Modern Latin                 12    1471-1686      10,288       lat
+         ⒊4     RIDGES Fraktur                     20    1487-1870      13,248       ger
+         ⒊5     DTA19                              39    1797-1898     243,942       ger
+                                                              Sum:     313,173
+
+
+APIs of the Internet Archive (Sect. ⒊1), make some remarks about transcription guidelines and
+their relevance to the production of GT for OCR purposes (Sect. 4), and end with a conclusion
+(Sect. 5).
+
+
+
+2 The GT4HistOCR dataset
+
+In the following we introduce the ﬁve subcorpora of our GT4HistOCR dataset (see Table 1). The
+transcription of these corpora was done manually (partly by students) and later checked and corrected
+by trained philologists within projects in which we participated:
+
+The Reference Corpus Early New High German⁵ is a DFG funded project, the Kallimachos corpus
+derives om work done in the BMBF funded Kallimachos project,⁶ the Early Modern Latin corpus
+was produced during projects on OCR postcorrection funded by CLARIN and DFG,⁷ RIDGES⁸
+has been built by students at HU Berlin as part of their studies in historical corpus linguistics and
+DTA19 has been extracted om the DFG-funded Deutsches Textarchiv (DTA).⁹ An overview of the
+contribution of these subcorpora to our dataset is shown in Table 1.
+
+The text line images corresponding to the transcripted lines have been prepared and matched by
+us using OCRopus segmentations routines or, in the case of DTA19, the segmentation of ABBYY
+Finereader. The ground truth in the form of paired line images and their transcriptions are an
+excerpt om the books in a corpus.
+
+Because the transcription guidelines for each subcorpus diﬀer in the amount of typographical detail
+that has been recorded we chose not to construct corpora according to language or period by merging
+and harmonizing material om these subcorpora. However, because the directory containing the
+GT of each book is named with publishing year and book title, a user can remix our data and
+ ⁵https://www.linguistics.ruhr-uni-bochum.de/ref/
+ ⁶http://kallimachos.de
+ ⁷http://www.cis.lmu.de/ocrworkshop/
+ ⁸http://korpling.org/ridges/
+ ⁹http://www.deutschestextarchiv.de/
+4                                 Springmann, Reul, Dipper, Baiter
+
+
+
+
+Figure 1: Example GT line pair of line image (upper line) and its transcription. A blank a er each
+          punctuation symbol has been added and the OCR model will consequently learn to map
+          a punctuation symbol to the sequence punctuation, blank.
+
+
+construct new corpora according to his needs a er the transcriptions have been harmonized. An
+example of a GT line pair is given in Fig. 1.
+
+
+2.1 Incunabula from the Reference Corpus Early New High German
+
+The Reference Corpus Early New High German (ENHG) is being created in an ongoing project
+which is part of a larger initiative with the goal of creating a diachronic reference corpus of German,
+starting with the earliest existing documents om Old High German and Old Saxon (750–1050),
+and including documents om Middle High German (1050–1350) and Middle Low German and
+Low Rhenish (1200-1650), up to Early New High German (1350–1650). The Reference Corpus
+Early New High German contains texts published between 1350 and 1650. From 1450 on, prints are
+included in the corpus besides manuscripts. The last part, 1550–1650, consists of prints only. The
+texts have been selected in a way as to represent a broad and balanced selection of available language
+data. The corpus contains texts om diﬀerent time periods, language areas, and document genres
+(e.g. administrative texts, religious texts, chronicles). From the Reference Corpus Early New High
+German we got ground truth for the incunabula printings in Table 2. Specimen of line images which
+give an impression of the fonts are shown in Fig. 2. Full bibliographic details for these documents
+can be retrieved om the Gesamtkatalog der Wiegendrucke¹⁰ via the GW number.
+While in principle we would like to have as large a corpus as possible and reuse all transcriptions
+  om 1450 up to 1650, the process of generating accurately segmented printed lines om scanned
+book pages and matching them to their corresponding transcriptions is still laborious. Because
+OCR ground truth for periods later than 1500 is provided in other subcorpora we just used the
+incunabula printings of the reference corpus.
+We also wanted to explore the feasibility to construct a mixed model and test its predictive power for
+unseen works om this period. For the about 30,000 incunabula printings, about 2000 print shops
+(oﬃcinae) using about 6000 typesets have been identiﬁed in the Typenrepertorium der Wiegendrucke,¹¹
+so a mixed model trained on only a few books might not generalize well to other incunabula printed
+in one of the many other and possibly much diﬀerent fonts. On the other hand, even in this
+¹⁰http://www.gesamtkatalogderwiegendrucke.de/GWEN.xhtml
+¹¹http://tw.staatsbibliothek-berlin.de/
+       Ground Truth for training OCR engines on Early Modern Latin and German Fraktur            5
+
+
+
+
+Table 2: The Early New High German incunabulum corpus. Given are the printing year, the GW
+         number, the short title, the number of ground truth lines for training and evaluation, and
+         the character recognition rate (CRR) in % of a mixed model trained on all other books.
+                   Year       GW      (Short) Title            # Lines    CRR
+                   1476   M51549      Historĳ                     3160    9⒍11
+                   1478    04307      Biblia                      2745    9⒈90
+                   1485   M09766      Gart der Gesuntheit         2520    9⒍37
+                   1486   M45593      Eunuchus                    3403    9⒉61
+                   1486     5077      Jherusalem                  2232    9⒎83
+                   1490    10289      Pfarrer vom Kalenberg       2503    9⒏07
+                   1490     5793      Leben und Sitten            3099    9⒊59
+                   1497     5593      Cirurgia                    3476    9⒍16
+                   1499     6688      Cronica Coellen             1628    9⒌98
+                                      Sum:                      24,766
+
+
+
+
+Figure 2: Example lines of the Early New High German incunabulum corpus in chronological order
+          (see Table 2).
+6                                   Springmann, Reul, Dipper, Baiter
+
+
+early period a divison of labour between punchcutters and printers took place and commercially
+successful printing types were available for sale (Carter, 1969), so it might be expected that not all
+6,000 identiﬁed fonts employed in the print shops were totally diﬀerent om each others.
+
+To get an idea of how well mixed models work for incunabula we trained nine models on eight
+books each and applied this model to the one book le out of the training set. The resulting CERs
+are given in the last column of Table 2. The previous ﬁnding of Springmann and Lüdeling (2017)
+that mixed models generalize better than individual models is corroborated: The worst recognition
+rate is 9⒈90% with an average rate of 9⒌40% on unseen books.
+
+We provide a mixed model that was trained on the combined training set of all books and evaluated
+against a previously unseen test set taken om the same books. The resulting character recognition
+rate is above 97% for each book in this corpus (a higher value than the previous average because for
+this model each book contributed to the training set).
+
+
+
+2.2 The Kallimachos corpus
+
+The Kallimachos corpus consists of the 1488 printing of Der Heiligen Leben and eight books om the
+Narragonien digital subproject.¹² dealing with the second most popular book in its time a er the
+bible, the Narrenschiﬀ (ship of fools) by Sebastian Brant. There are four Latin printings (Stultifera
+nauis) translated by Locher and Badius, respectively, two Early New High German printings, one
+Early Low German work (Der narrenscip), and one Latin/English document (Barclay) of which we
+just provide the Latin part. Whereas the German documents use a broken script, some Latin works
+are printed with Antiqua types similar to our modern types (Fig. 3). We do not provide a mixed
+model of these rather diverse types but leave it to the reader to construct his own models for his
+speciﬁc interests. The transcription of Badius is less accurate than that of the other books because
+it has not yet been checked to the same level of detail.
+
+
+
+2.3 An Early Modern Latin corpus
+
+In Springmann, Fink, and Schulz (2016) we introduced a Latin data set of manual transcriptions
+  om books that were either of interest to us or to scholars who requested an OCR text for a complete
+book for which we had to train an individual recognition model. The Early Modern Latin corpus is
+essentially the same, but leaves out the 1497 Stultifera Nauis (belonging to the Kallimachos corpus)
+and adds the 1543 Psalterium of Folengo (see Table 4). The printings are mostly in Antiqua types
+(except the Speculum Naturale of Beauvais, Fig. 4). The two provided models are those of the
+above mentioned publication.
+
+¹²http://kallimachos.de/kallimachos/index.php/Narragonien Because annotated transcriptions of the
+   Narrenschiﬀ works have not yet been published the single lines of these works have been randomly permutated
+   and do not provide a coherent text in their enumerated order [0⒋0⒊2018].
+       Ground Truth for training OCR engines on Early Modern Latin and German Fraktur         7
+
+
+
+
+                               Table 3: The Kallimachos corpus
+                 Year        GW    (Short) Title                      # Lines
+                 1488    M11407    Der Heiligen Leben (Winterteil)       4178
+                 1495      5049    Das neu narrenschiﬀ                   2114
+                 1497      5051    Das nuw schiﬀ von narragonia          1197
+                 1497      5056    Stultifera nauis                      1424
+                 1497      5061    Stultifera Nauis                      1092
+                 1499      5064    Stultifera nauis                       721
+                 1500      5066    Der narrenscip                        2500
+                 1505              Nauis stultifera (Badius)             4713
+                 1509              The Shyp of Folys (Barclay)           2990
+                                   Sum:                                20,929
+
+
+
+
+Figure 3: Example lines of the Kallimachos corpus in chronological order (see Table 3). Both An-
+          tiqua fonts (Latin) and broken fonts (German) are present.
+8                                 Springmann, Reul, Dipper, Baiter
+
+
+
+
+                              Table 4: The Early Modern Latin corpus
+                       Year    (Short) Title             Author       # Lines
+                       1471    Orthographia              Tortellius       417
+                       1476    Speculum Naturale         Beauvais        2012
+                       1483    Decades                   Biondo           915
+                       1522    De Septem Secundadeis     Trithemius       201
+                       1543    De Bello Alexandrino      Caesar           830
+                       1543    Psalterium                Folengo          314
+                       1553    Carmina                   Pigna            297
+                       1557    Methodus                  Clenardus        350
+                       1564    Thucydides                Valla           1948
+                       1591    Progymnasmata vol. I      Pontanus         710
+                       1668    Leviathan                 Hobbes          1078
+                       1686    Lexicon Atriale           Comenius        1216
+                                                         Sum:          10,288
+
+
+
+
+    Figure 4: Example lines of the Early Modern Latin corpus in chronological order (see Table 4).
+       Ground Truth for training OCR engines on Early Modern Latin and German Fraktur               9
+
+
+
+                              Table 5: The RIDGES Fraktur corpus.
+              Year    (Short) Title                            Author          # Lines
+              1487    Garten der Gesunthait                    Cuba                747
+              1532    Artzney Buchlein der Kreutter            Tallat              504
+              1532    Contrafayt Kreüterbuch                   Brunfels            366
+              1543    New Kreüterbuch                          Fuchs               483
+              1557    Wie sich meniglich                       Bodenstein          995
+              1588    Paradeißgärtlein                         Rosbach             795
+              1603    Alchymistische Practic                   Libavius            473
+              1609    Hortulus Sanitatis                       Durante             696
+              1609    Kräutterbuch                             Carrichter          677
+              1639    Pﬂantz-Gart                              Rhagor             1091
+              1652    Wund-Artzney                             Fabricius           601
+              1673    Thesaurus Sanitatis                      Nasser              733
+              1675    Curioser Botanicus                       Anonymous           567
+              1687    Der Schweitzerische Botanicus            Roll                520
+              1722    Flora Saturnizans                        Henckel             562
+              1735    Mysterium Sigillorvm                     Hiebner             470
+              1764    Einleitung zu der Kräuterkenntniß        Oeder               916
+              1774    Unterricht                               Eisen               562
+              1828    Die Eigenscha en aller Heilpﬂanzen       Anonymous           658
+              1870    Deutsche Pﬂanzennamen                    Grassmann           868
+                                                               Sum:             13,248
+
+
+
+2.4 The RIDGES Fraktur corpus
+
+
+
+
+The use of broken scripts dates back to the 12th century and was once customary all over Europe.
+It is therefore of considerable interest to be able to recognize this script in order to OCR the large
+amount of works printed in a variety of Fraktur. This dataset collects Fraktur material om 20
+documents of the RIDGES corpus of herbals (Odebrecht et al., 2017) which has been proo ead
+for diplomatic accuracy and matched by us against lines images of the best available scans. OCR
+experiments on this corpus were reported in Springmann and Lüdeling (2017). The two mixed
+models used in that publication are provided and give a good base model covering about 400 years
+of Fraktur printings. Note that the author of the 1543 printing was erroneously attributed to
+Hieronymous Bock in Springmann and Lüdeling (2017) and has been corrected to Leonhart Fuchs
+in Table 5.
+10                                Springmann, Reul, Dipper, Baiter
+
+
+
+
+     Figure 5: Example lines of the RIDGES Fraktur corpus in chronological order (see Table 5).
+       Ground Truth for training OCR engines on Early Modern Latin and German Fraktur              11
+
+
+2.5 The DTA19 corpus of 19th century German Fraktur
+
+The use of broken scripts in the 19th century and later was mostly restricted to Germany and some
+neighboring countries. There is a large amount of scans available om 19th century documents
+(newspapers, long-running journals such as Die Grenzboten¹³ or Daheim, encyclopedias,¹⁴ dictio-
+naries, novels, and reprints of classical works om previous centuries) which are of considerable
+interest to philologists and historians.
+Because of this high interest, some prominent works have been converted into electronic form
+by manual transcription (keyboarding, double-entry transcription) in low-wage countries.¹⁵ Given
+the sheer amount of available material, faster and less costly alternatives are sought a er and both
+commercial (ABBYY Finereader with a special Fraktur licence¹⁶) and open source OCR engines
+(Tesseract and OCRopus) are capable of recognizing Fraktur printings. What motivated us to look
+at 19th century Fraktur separately was the question whether we could beat the available general
+recognition models of the mentioned OCR engines. This is currently an open research topic.
+It is tempting to use synthetic training materials, as a variety of Fraktur computer fonts is readily
+available on the internet. In fact, the Fraktur recognition model of Tesseract is completely based
+upon synthetic material, the model of OCRopus mostly. However, closer inspection shows that
+many fonts are either lacking some essential characterics of real Fraktur types (such as long ſ, or ch
+and tz ligatures) or have obviously been constructed for calligraphic use and do not reﬂect the most
+  equently used historical types. For best OCR results we have to rely on transcriptions of real data,
+at least as an addition to any synthetic data set one might construct.
+In the following we describe a collection of transcriptions om Deutsches Textarchiv for which line
+segmentations om ABBYY Finereader are available. The corresponding scans of these transcrip-
+tions are held by Staatsbibliothek zu Berlin.¹⁷ We produced line images by cutting page scans into
+lines using the line coordinates contained in the ABBYY XML output. In this way a corpus of 63
+books, some belonging to multi-volume works, could be assembled fully automatically. From these
+we selected just one volume of each multi-volume edition to provide a balanced multi-font corpus
+and did some quality checks on correct segmentations by hand.
+The resulting DTA19 corpus of 39 works is detailed in Table 6. To our knowledge there does
+not exist a similar extensive collection of ground truth for German 19th century Fraktur. We also
+provide a model trained on this corpus.
+Because most Fraktur fonts do not diﬀerentiate between the alphabetic characters I and J and use
+the same glyph for both, we harmonized the transcription of DTA that employs diﬀerent symbols to
+just use J. Otherwise, a model trained on the original transcription would randomly output either I
+or J for the same glyph. As a side eﬀect, however, Roman numerals with the I glyph in the image
+will now be recognized with the J letter in the OCR output. This is a systematic error resulting
+¹³http://brema.suub.uni-bremen.de/grenzboten
+¹⁴https://www.zedler-lexikon.de/
+¹⁵E.g. Krünitz’ Ökonomische Enzyklopädie: http://www.kruenitz1.uni-trier.de/
+¹⁶https://abbyy.technology/en:features:ocr:old_font_recognition
+¹⁷http://staatsbibliothek-berlin.de/
+12                               Springmann, Reul, Dipper, Baiter
+
+
+
+
+Figure 6: A selection of lines of the DTA19 corpus. From top to bottom: 1815, 1817, 1819, 1826,
+          1835, 1853, 1861, 1879, 1891, 189⒎
+
+
+ om ground truth that is incorrect for these cases. A better model would result om training on
+handcorrected ground truth where only Roman numerals have the I letter.
+
+
+
+3 Other historical ground truth corpora
+
+In the following we mention other historical ground truth corpora which are not part of GT4HistOCR.
+Only the Archiscribe corpus of 19th century German Fraktur is directly usable for OCR model train-
+ing whereas the others would need various amounts of eﬀort to be aligned as line image/transcription
+pairs. We also give estimates on the amount of material (number of line pairs) potentially available.
+
+
+3.1 The Archiscribe corpus
+
+A prime obstacle for generating ground truth for OCR training purposes consists in the segmenta-
+tion of textual elements on a printed page into text lines. To circumvent this problem, we made use
+of several open APIs of the Internet Archive¹⁸ to directly retrieve line images om historical books
+that can be used as image sources for creating ground truth.
+
+The Internet Archive hosts a collection of over 15 million texts, whose scans are sourced om
+Google Books as well as a number of volunteers and cooperating institutions.¹⁹ For every scanned
+book, an automated process creates OCR with ABBYY FineReader. While the actual OCR output
+of this engine for text with Fraktur typefaces is of very low quality, the resulting line segmentation
+is usually fairly accurate.
+
+To create ground truth om the Internet Archive corpus, a simple crowd sourcing web application,
+Archiscribe,²⁰ is provided. First-time users of the application have to read through a simpliﬁed ver-
+¹⁸http://archive.org
+¹⁹https://archive.org/scanning
+²⁰https://archiscribe.jbaiter.de; source code: https://github.com/jbaiter/archiscribe (MIT li-
+   cense)
+Ground Truth for training OCR engines on Early Modern Latin and German Fraktur   13
+
+
+
+                     Table 6: The DTA19 Fraktur corpus.
+       Year   (Short) Title                   Author           # Lines
+       1797   Herzensergießungen              Wackenroder         5150
+       1802   O erdingen                      Novalis             6198
+       1804   Flegeǉahre vol. 1               Paul                5332
+       1815   Elixiere vol. 1                 Hoﬀmann             8008
+       1816   Buchhandel                      Perthes              861
+       1817   Nachtstücke vol. 1              Hoﬀmann             6578
+       1819   Revolution                      Görres              6178
+       1821   Waldhornist                     Müller              2343
+       1826   Taugenichts                     Eichendorﬀ          7662
+       1827   Liebe                           Clauren             6724
+       1827   Reisebilder vol. 2              Heine               5980
+       1827   Lieder                          Heine               5873
+       1828   Gedichte                        Platen              5103
+       1828   Literatur vol. 1                Menzel              8124
+       1832   Gedichte                        Lenau               4446
+       1832   Paris vol. 1                    Börne               5329
+       1834   Felǳüge                         Wienbarg            7805
+       1835   Wally                           Gutzkow             5728
+       1852   Ruhe vol. 1                     Alexis              9314
+       1852   Gedichte                        Storm               2038
+       1853   Ästhetik                        Rosenkranz         14062
+       1854   Heinrich vol. 1                 Keller              9343
+       1854   Christus                        Candidus            2095
+       1861   Problematische Naturen vol. 2   Spielhagen          6445
+       1863   Menschengeschlecht              Schleiden           1788
+       1871   Bühnenleben                     Bauer              12008
+       1877   Novellen                        Saar                6354
+       1879   Auch Einer vol. 2               Vischer            10492
+       1880   Hochbau                         Raschdorﬀ            661
+       1880   Heidi                           Spyri               6210
+       1882   Sinngedicht                     Keller             11209
+       1882   Gedichte                        Meyer               6262
+       1886   Katz                            Eschstruth          6601
+       1887   Künstlerische Tätigkeit         Fiedler             4983
+       1888   Irrungen                        Fontane             7079
+       1891   Bittersüß                       Frapan              7008
+       1897   Gewerkscha sbewegung            Poersch             1476
+       1898   Fenitschka                      Andreas-Salomé      4753
+       1898   Erinnerungen vol. 2             Bismarck           10339
+                                              Sum:             243,942
+14                                Springmann, Reul, Dipper, Baiter
+
+
+
+
+                           Figure 7: Transcribing a line with Archiscribe
+
+
+sion of the transcription guidelines of the Deutsches Textarchiv.²¹ They are then oﬀered the option
+to pick a certain year between 1800 and 1900 and set a number of lines they want to transcribe.
+
+In order to retrieve these lines om a suitable book, Archiscribe uses the publicly available search
+API of the Internet Archive²² to retrieve a list of 19th century German language texts and randomly
+picks a volume that has not yet been transcribed. To determine whether a given text is actually
+set in Fraktur, a heuristic is used: The OCR text is downloaded and searched for the token i , a
+common misinterpretation by OCR engines trained on Antiqua fonts of the actual word iﬅ (German
+ist = English is), which has a high equency in any German text (of course, real books also contain
+quotations and other material in Antiqua, as is seen in the second line of Figure 8). If this heuristic
+results in a false positive (there are some books printed in Antiqua employing a long s), one can
+just start over. Once a suitable book is found, the desired number of lines²³ are picked at random
+  om the book.
+
+To serve the images to the user, Archiscribe uses the publicly available IIIF Image API endpoint²⁴
+of the Internet Archive. As the API allows the cropping of regions out of a given page image hosted
+by the archive.org server, the application can directly use it for rendering the line images in the
+user’s browser, and no image processing on the Archiscribe server is neccessary.
+
+Once a suitable volume has been picked and the lines to be transcribed have been determined, the
+user is presented with a minimal transcription interface consisting of the line to be transcribed, a
+text box to enter the transcription and an on-screen keyboard with a number of commonly occurring
+special characters not available on modern keyboards. To oﬀer more context in diﬃcult cases, the
+user may opt to display the lines above and below the line to be transcribed (Fig.7).
+
+When all lines have been transcribed, they are submitted to the Archiscribe server, where they are
+
+²¹http://www.deutschestextarchiv.de/doku/basisformat/transkription.html
+²²https://archive.org/advancedsearch.php
+²³user-deﬁned, by default 50
+²⁴https://iiif.archivelab.org/iiif/documentation
+        Ground Truth for training OCR engines on Early Modern Latin and German Fraktur                                15
+
+
+
+
+Figure 8: Reviewing an existing transcription with Archiscribe. O en books printed in Fraktur also
+          contain lines in Antiqua, mostly quotations in Latin (second line om top). If they are
+          transcribed as well, the model will be able to recognize mixed Fraktur-Antiqua texts.
+
+
+stored alongside with their corresponding line images in a Git repository that is published to the
+corpus repository on GitHub on every change.²⁵
+To ease maintenance of the ground truth corpus a simple review interface is available (Fig.8) where
+existing transcriptions can be ﬁltered and edited. Due to the use of a Git repository as the storage
+backend, it is also very easy to keep track of changes in the dataset or to revert some changes in case
+of vandalism.²⁶
+Currently the application is restricted to 19th century German language books om the Internet
+Archive, but it is planned to add support for the transcription of books sourced om any repository
+that oﬀers a IIIF API, the number of which is steadily increasing.
+The Archiscribe corpus of ground truth generated by crowdsourcing with the Archiscribe tool cur-
+rently consists of 4145 lines om 109 works published across 72 years²⁷ evenly distributed across
+the whole 19th century. All of the data is available under a CC-BY ⒋0 license.
+
+
+3.2 The OCR-D ground truth corpus
+
+The OCR-D project funded by Deutsche Forschungsgemeinscha (DFG) created ground truth of
+Latin and German printings published between 1500 and 1835 in Germany. This corpus currently
+consists of one to four pages each of 94 works.²⁸ Data are provided in both TIFF format (page
+²⁵https://github.com/jbaiter/archiscribe-corpus
+²⁶Although the application does not require authentication or registration of any kind, this has not been an issue so far.
+²⁷[last accessed 31th August 2018]
+²⁸http://www.ocr-d.de/sites/all/GTDaten/IndexGT.html [last accessed 26 August 2018]
+16                                 Springmann, Reul, Dipper, Baiter
+
+
+images) and an XML representation in both ALTO and PAGE XML containing the segmentation
+of the pages in text zones as well as their transcription. In order to produce OCR training data om
+these ﬁles, the text zones of the TIFF images need to be identiﬁed by their coordinates contained
+in the XML ﬁles, then these subimages have to be segmented into text lines and matched with
+the corresponding transcription, also contained in the XML ﬁles. We estimate that this dataset
+currently contains 300 pages and a total of approximately 10,000 lines.
+
+
+3.3 The full DTA corpus
+
+There is also the complete DTA corpus of currently 4,422 volumes in German with transcriptions
+on page level covering the period 1500 to 1900. To produce OCR ground truth fully automatically
+one needs to segment page images and heuristically match the existing line transcriptions against
+segmented text line images. Work along this direction is already under way. The amount of available
+lines is approximately 30 million.²⁹
+
+
+3.4 Ground truth from the IMPACT project
+
+The EU-funded IMPACT project (2008-2012) collected historical ground truth in the form of
+semantic regions of page images (such as text, image, footnote, marginal notes, page number etc.)
+for the task of automatic page segmentation (document analysis) as well as transcriptions for the text
+regions of ca. 45,000 pages.³⁰ Transcribed ground truth is available for several European languages.³¹
+There may be as many as 1 million lines available, but unfortunately the ground truth comes under a
+variety of licenses depending on the contributing institution and can currently only be downloaded
+page by page.
+
+
+
+4 Notes on transcription guidelines for OCR
+
+To produce training data for OCR where a machine will decide what label to attach to a printed
+glyph, the golden rule is: The same glyph must have the same transcription, even if the glyph has diﬀerent
+context dependent meanings. Otherwise, the machine will get confused and randomly output one of
+the diﬀerent characters or character sequences it has learnt to associate with the glyph. Consequently
+the single Fraktur glyph for the letters I and J can only have one character representation, not two,
+and ambiguous and context dependent abbreviations must not be resolved. E.g., a vowel with tilde
+above in Early Modern Latin could either mean (vowel+m) or (vowel+n). A further example is
+provided by the r-hook above letter d in Table 7. Also, ignoring line endings of printed lines
+and merging hyphenated words will destroy the correspondence between printed line image and
+transcription needed for model training.
+²⁹http://www.deutschestextarchiv.de/doku/ueberblick
+³⁰https://www.primaresearch.org/www/media/datasets/ImpactRepositoryPoster.pdf
+³¹See https://www.digitisation.eu/
+       Ground Truth for training OCR engines on Early Modern Latin and German Fraktur             17
+
+
+This makes most of the existing transcriptions of historical documents which resolve abbreviations,
+merge hyphenated words at line endings, correct printing errors, and modernize historical spellings
+unusable for OCR purposes. What is needed instead is a diplomatic transcription, i.e. a transcription
+of printed glyphs to characters with no or minimal editorial intervention.³²
+
+But even if we transcribe diplomatically, there is still room for a decision on the level of detail
+we want to transcribe, e.g. if we want to record the usage of long s (ſ) or rounded r (r rotunda).
+The collection of explicit recordings of such decisions are called transcription guidelines. They are
+indispensable to ensure a consistent text, both over time and between diﬀerent people transcribing
+parts of same document. They are also necessary if you want to pool data om diﬀerent corpora
+which have been transcribed by diﬀerent guidelines. You have to inspect the guidelines in order to
+regularize diﬀerent data sets to a common norm.
+
+Explicit transcription guidelines exist for the Reference Corpus ENHG,³³ texts om DTA,³⁴ and
+RIDGES.³⁵ All other corpora had to be made internally consistent with our Perl script. The correct-
+ness of the data will determine the predictive power of any machine model trained on it. We deﬁne
+the correctness of a transcription as its adherence to predeﬁned, internally consistent transcription
+guidelines and not as the level of detail which it records. We emphasize this point because we have
+been set back by inconsistent data produced by researchers, students and the public alike.
+
+Note that a linguistically motivated transcription (such as in the Reference Corpus Early New High
+German or the Deutsches Textarchiv) might very well choose to transcribe similar looking glyphs
+by diﬀerently looking characters for a speciﬁc use case such as search. In order to use these tran-
+scriptions for OCR model training one needs to normalize to just one alternative (J, in our case).
+Examples of diﬀerences between a linguistic transcription and a transcription for OCR training are
+shown in Table 7 for the Reference Corpus ENHG.
+
+
+
+5 Conclusion
+
+Historical OCR has been advanced to a state where even very early printings om the 15th century
+can be recognized by individually trained models with a character recognition rate of 98% and above.
+To be practical on a large scale, however, pretrained models are needed that result in recognition
+rates >95% without any prior training requirement. As long as we lack an automatic method
+to revive historical fonts to build large synthetic corpora the construction of pretrained models
+rests on the availability of historical ground truth. The GT4HistOCR dataset is put forward to
+allow experimentation and research under a permissive CC-BY ⒋0 license and is a ﬁrst step for
+the construction of widely applicable pretrained models for Latin and German Fraktur. We hope
+
+³²http://www.stoa.org/epidoc/gl/latest/trans-diplomatic.html
+³³Not yet publically available
+³⁴See Footnote 22
+³⁵https://www.linguistik.hu-berlin.de/de/institut/professuren/korpuslinguistik/
+   forschung/ridges-projekt/documentation/download-files/pubs/ridgesv8_2018-04_06.pdf, pp.
+   248 ﬀ.
+18                                Springmann, Reul, Dipper, Baiter
+
+
+
+Table 7: Extract om the transcription guidelines of the Reference Corpus ENHG. The transcript
+         column shows examples of the linguistically motivated transcription, the UTF-8 column
+         represents our interpretation for OCR purposes.
+     Example   Transcript   UTF-8      Description
+
+               o\e          oͤ         vowel modiﬁer
+               o_r          or         ligature
+               d’           ð          d with abbreviation of <er>, <r>, <ir>, <re>, <ri>
+               me<t>        met        letters that are diﬃcult to read
+               A=           A⸗         word-internal line break
+
+
+that other researchers will follow our example and make their ground truth available under an open
+source license in directly usable form for OCR training.
+
+
+Acknowledgments
+
+We are grateful to our colleagues Phillip Beckenbauer for aligning the ground truth of the Early
+New High German Corpus to the printed text lines of the respective books and the training of a
+mixed model, to the Narragonien digital project (Joachim Hamm/Brigitte Burrichter) providing
+corrected transcriptions as ground truth, especially by Christine Grundig and Thomas Baier and
+their collaborators, and to the many students and collaborators of the RIDGES Corpus at Humboldt
+University Berlin. Uwe Springmann produced most of the Early Modern Latin Corpus, Johannes
+Baiter is the author of the Archiscribe tool. The Kallimachos project has been funded by BMBF
+under grant no. 01UG1415A and 01UG1715A.
+
+
+References
+Breuel, Thomas M, Adnan Ul-Hasan, Mayce Ali Al-Azawi, and Faisal Shafait (2013). “High-
+   Performance OCR for Printed English and Fraktur using LSTM Networks”. In: 2th Interna-
+   tional Conference on Document Analysis and Recognition (ICDAR), 2013. IEEE, pp. 683–68⒎
+       : http://dx.doi.org/10.1109/ICDAR.2013.140.
+Carter, Harry (1969). A View of Early Typography: Up to about 1600: the Lyell Lectures 1968. Claren-
+   don Press.
+Fischer, Andreas, Markus Wüthrich, Marcus Liwicki, Volkmar Frinken, Horst Bunke, Gabriel
+   Viehhauser, and Michael Stolz (2009). “Automatic transcription of handwritten medieval doc-
+   uments”. In: 15th International Conference on Virtual Systems and Multimedia, 2009 (VSMM’09).
+   IEEE, pp. 137–14⒉       : http://dx.doi.org/10.1109/VSMM.2009.26.
+       Ground Truth for training OCR engines on Early Modern Latin and German Fraktur             19
+
+
+Odebrecht, Carolin, Malte Belz, Amir Zeldes, and Anke (2017). “RIDGES Herbology: designing
+  a diachronic multi-layer corpus”. In: Language Resources and Evaluation 5⒈3, pp. 695–72⒌            :
+  10.1007/s10579-016-9374-3.
+Reul, Christian, Marco Dittrich, and Martin Gruner (2017). “Case Study of a Highly Automated
+  Layout Analysis and OCR of an Incunabulum: ’Der Heiligen Leben’ (1488)”. In: Proceedings of
+  the 2nd International Conference on Digital Access to Textual Cultural Heritage. DATeCH20⒘
+  Göttingen, Germany: ACM, pp. 155–160.             : 978-1-4503-5265-⒐         : 10.1145/3078081.
+  3078098.
+Reul, Christian, Christoph Wick, Uwe Springmann, and Frank Puppe (2017). “Transfer Learning
+  for OCRopus Model Training on Early Printed Books”. In: 027.7 Zeitschri r Bibliothekskultur
+  / Journal for Library Culture ⒌1, pp. 38–5⒈         : 10.12685/027.7-5-1-169.
+Reul, Christian, Uwe Springmann, Christoph Wick, and Frank Puppe (2018). “Improving OCR
+  Accuracy on Early Printed Books by Utilizing Cross Fold Training and Voting”. In: 13th IAPR
+  International Workshop on Document Analysis Systems, DAS 2018, Vienna, Austria, April 24-27,
+  2018, pp. 423–42⒏          : 10.1109/DAS.2018.30.
+Springmann, Uwe and Florian Fink (Feb. 2016). CIS OCR Workshop v1.0: OCR and postcorrection
+  of early printings for digital humanities.   : 10.5281/zenodo.46571.
+Springmann, Uwe, Florian Fink, and Klaus U. Schulz (2015). Workshop: OCR & postcorrection of
+  early printings for digital humanities.    : http://www.cis.lmu.de/ocrworkshop.
+Springmann, Uwe, Florian Fink, and Klaus U Schulz (2016). “Automatic quality evaluation and
+  (semi-) automatic improvement of OCR models for historical printings”. In: ArXiv e-prints.          :
+  http://arxiv.org/abs/1606.05157.
+Springmann, Uwe and Anke Lüdeling (2017). “OCR of historical printings with an application to
+  building diachronic corpora: A case study using the RIDGES herbal corpus”. In: Digital Hu-
+  manities Quarterly ⒒⒉            : http://www.digitalhumanities.org/dhq/vol/11/2/
+  000288/000288.html.
+Springmann, Uwe, Dietmar Najock, Hermann Morgenroth, Helmut Schmid, Annette Gotscharek,
+  and Florian Fink (2014). “OCR of historical printings of Latin texts: problems, prospects, progress”.
+  In: Proceedings of the First International Conference on Digital Access to Textual Cultural Heritage.
+  DATeCH ’⒕ Madrid, Spain: ACM, pp. 57–6⒈                   : 978-1-4503-2588-⒉         : 10 . 1145 /
+  2595188.2595197.
+Springmann, Uwe, Christian Reul, Stefanie Dipper, and Johannes Baiter (Aug. 2018). GT4HistOCR:
+  Ground Truth for training OCR engines on historical documents in German Fraktur and Early Mod-
+  ern Latin.      : 10.5281/zenodo.1344131.
+Ul-Hasan, Adnan and Thomas M. Breuel (2013). “Can we build language-independent OCR using
+  LSTM networks?” In: Proceedings of the 4th International Workshop on Multilingual OCR, ICDAR
+  2013, Washington, D.C., USA, August 24, 2013, 9:1–9:⒌           : 10.1145/2505377.2505394.
+

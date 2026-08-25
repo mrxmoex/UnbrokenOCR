@@ -2,13 +2,13 @@
 
 > Fraktur looks broken. This stack is not.
 
-**Project:** UnbrokenOCR · **CLI:** `pdfx` · **Package:** pdfx-hermes 0.3.0
+**Project:** UnbrokenOCR · **CLI:** `pdfx` · **Package:** pdfx-hermes 0.3.1
 
 **Upstream policy:** do **not** push into hermes-agent until the human marks it bulletproof.
 
 ---
 
-# pdfx-hermes 0.3.0
+# pdfx-hermes 0.3.1
 
 Local PDF extract + OCR for **Hermes Agent**. **No cloud.** One CLI: `pdfx`.
 
@@ -30,7 +30,7 @@ This package does **not** ship model weights (tessdata, kraken `.mlmodel`, marke
 ## Quick install
 
 ```bash
-tar xzf pdfx-hermes-0.3.0.tar.gz
+tar xzf pdfx-hermes-0.3.1.tar.gz
 cd pdfx-hermes
 chmod +x INSTALL.sh pdfx.py pdfx-batch-fraktur.sh pdfx_metrics.py
 ./INSTALL.sh --dry-run          # report only
@@ -137,7 +137,7 @@ Gates (Dachdecker control corpus — methodology only, book not shipped):
 
 Details: `skill/references/CONTROL_GATES.md`.
 
-**Locked defaults in 0.3.0** (from 0.2.2 gates): Fraktur `--engine auto` →
+**Locked defaults in 0.3.1** (from 0.2.2 gates): Fraktur `--engine auto` →
 **ocrmypdf**; QA → `--engine images`; chunk size **20**.
 
 ---
@@ -153,7 +153,7 @@ Stamp extracts so later sessions know the route:
 # engine: ocrmypdf
 # pages: 8-20
 # inspect: kind=digital label=garbled → forced fraktur
-# pdfx: 0.3.0
+# pdfx: 0.3.1
 ```
 
 ---
@@ -212,7 +212,7 @@ Glyph templates catalog (binaries optional/local):
 
 ```
 pdfx-hermes/
-  VERSION                 # 0.3.0
+  VERSION                 # 0.3.1
   MANIFEST.txt
   LICENSE                 # MIT (wrapper)
   NOTICE                  # third-party banner
@@ -279,7 +279,7 @@ Skill name: **`pdfx`**. Load with `skill_view(name='pdfx')` after install
 ## Verification
 
 ```bash
-pdfx --version                    # pdfx 0.3.0
+pdfx --version                    # pdfx 0.3.1
 pdfx FILE.pdf --inspect           # text_quality + plate_page_candidates
 tesseract --list-langs | grep frk
 pdfx FILE.pdf --mode fraktur --pages 1-2 --out /tmp/t.txt

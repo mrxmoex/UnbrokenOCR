@@ -27,7 +27,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 
 def _discover_root() -> Path:
@@ -269,11 +269,32 @@ elif hits >= 2 and score >= 0.30:
     label = "mixed"
 else:
     label = "garbled"
+# --- Fraktur diplomatic / Antiqua-OCR signals (research cluster 2018; UnbrokenOCR 0.3.1) ---
+long_s = sample.count("ſ")
+soft_hyphen = sample.count("⸗") + sample.count("\u00ad")
+# Archiscribe-style: Antiqua engines often destroy ſt clusters (e.g. *ist* / *dieſe*)
+st_cluster = len(re.findall(r"ſt", sample))
+# mangled st/ist tokens common in bad Fraktur digital layers
+mangled_st = len(re.findall(r"\b[il1|][s5$]t\b|\b[il1|]ft\b|\bdief[ec]\b|\bdieie\b", sample, re.I))
+letters_nz = max(1, letters)
+long_s_per_1k = round(1000.0 * long_s / letters_nz, 2)
+fraktur_signals = {
+    "long_s_count": long_s,
+    "long_s_per_1k_letters": long_s_per_1k,
+    "soft_hyphen_count": soft_hyphen,
+    "st_long_s_clusters": st_cluster,
+    "mangled_st_hits": mangled_st,
+    # diplomatic long-s present OR classic Antiqua-on-Fraktur mangling with weak function words
+    "likely_fraktur_print": bool(long_s >= 3 or st_cluster >= 2 or (mangled_st >= 2 and hits <= 3)),
+}
 kind_density = "digital" if text_chars > 80 * max(1, len(doc) // 2) else "scan-or-image"
 if kind_density == "digital" and label in ("garbled", "empty"):
     recommend = "ocr-fraktur-or-scan"
 elif kind_density == "digital" and label == "mixed":
     recommend = "spot-check-then-ocr"
+elif kind_density == "digital" and fraktur_signals["likely_fraktur_print"] and long_s >= 5 and label == "usable":
+    # usable diplomatic Fraktur layer (rare) — still prefer Fraktur-aware search sidecar
+    recommend = "digital-fraktur-keep-long-s"
 elif kind_density == "digital":
     recommend = "digital"
 else:
@@ -304,6 +325,7 @@ print(json.dumps({
         "short_line_ratio": round(short_ratio, 3),
         "sample_pages": [i + 1 for _, i, _ in ranked[:4]],
     },
+    "fraktur_signals": fraktur_signals,
     "recommend": recommend,
     "page_detail": pages[:8],
     "plate_page_candidates": plate_page_candidates[:80],
@@ -816,6 +838,11 @@ def main() -> None:
         action="store_true",
         help="with --out, also write *.plates.json from inspect plate_page_candidates",
     )
+    ap.add_argument(
+        "--search-sidecar",
+        action="store_true",
+        help="with --out, also write *.search.txt (ſ→s fold) for grep; keeps canonical long‑s in --out",
+    )
     args = ap.parse_args()
 
     if args.path is None:
@@ -1080,6 +1107,12 @@ def main() -> None:
         outp.parent.mkdir(parents=True, exist_ok=True)
         outp.write_text(text, encoding="utf-8")
         print(f"wrote {args.out} ({len(text)} chars)")
+        if args.search_sidecar:
+            # diplomatic policy: canonical keeps ſ; search folds
+            side = outp.with_name(outp.stem + ".search" + outp.suffix)
+            folded = text.replace("ſ", "s").replace("⸗", "-").replace("\u00ad", "")
+            side.write_text(folded, encoding="utf-8")
+            print(f"wrote search sidecar {side} (ſ→s)")
         if args.plates_sidecar and info is not None:
             side = outp.with_suffix(outp.suffix + ".plates.json")
             side.write_text(
