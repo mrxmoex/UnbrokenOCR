@@ -22,7 +22,7 @@ from pathlib import Path
 
 def fold_for_search(text: str) -> str:
     # long s → s (primary)
-    t = text.replace("ſ", "s").replace("ſ".upper() if False else "ſ", "s")
+    t = text.replace("ſ", "s")
     # soft hyphen / double hyphen used as line join in diplomatic GT
     t = t.replace("⸗", "-").replace("\u00ad", "")
     return t
