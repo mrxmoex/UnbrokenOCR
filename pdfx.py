@@ -579,7 +579,7 @@ def ocr_pdf(
     frakturish = mode in ("fraktur", "old-german", "old")
     if engine == "images":
         return ocr_pdf_via_images(
-            path, mode if frakturish else mode, pages, render_dir, dpi=dpi
+            path, mode, pages, render_dir, dpi=dpi
         )
     # auto + ocrmypdf: force when user asked --ocr or fraktur or force flag
     return ocr_pdf_ocrmypdf(path, mode, pages, out_pdf, force=force or frakturish)
@@ -748,9 +748,8 @@ def require_frk(mode: str) -> None:
 
 
 def resolve_engine(mode: str, engine: str, edge_flags: list[str]) -> str:
-    frakturish = mode in ("fraktur", "old-german", "old")
     if engine == "auto":
-        eff = "ocrmypdf" if frakturish or mode == "scan" else "ocrmypdf"
+        eff = "ocrmypdf"
     else:
         eff = engine
     if eff == "ocrmypdf" and not shutil.which("ocrmypdf"):
