@@ -14,6 +14,9 @@ Routes:
   - --pages honored on digital + OCR paths
   - Fraktur / forced OCR uses --force-ocr or image OCR (not --skip-text)
   - inspect reports text_quality; auto refuses garbled Google layers
+
+Spine vs sidecar: inspect / digital / Fraktur-scan OCR / search fold live here.
+marker, kurrent, handwritten dumps, crawl, --index-paper are pdfx_sidecars.py.
 """
 from __future__ import annotations
 
@@ -26,6 +29,8 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+from pdfx_normalize import fold_for_search
 
 __version__ = "0.3.1"
 
@@ -147,6 +152,7 @@ class _LazyPath(os.PathLike):
 
 
 _INSPECT_WORKER = Path(__file__).resolve().parent / "pdfx_inspect_worker.py"
+_DIGITAL_WORKER = Path(__file__).resolve().parent / "pdfx_digital_worker.py"
 
 VENV_PY = _LazyPath(_python_for_pymupdf)
 MARKER = _LazyPath(
@@ -293,76 +299,34 @@ def extract_digital(path: Path, markdown: bool, pages: str | None = None) -> str
         # pymupdf4llm can OCR images — avoid for pure digital; use get_text path when pages set
         # For full-doc markdown without pages, keep pymupdf4llm but warn via stderr if slow
         if pr is None:
-            code = "import sys, pymupdf4llm; print(pymupdf4llm.to_markdown(sys.argv[1]))"
-            r = run([str(VENV_PY), "-c", code, str(path)])
+            cmd = [str(VENV_PY), str(_DIGITAL_WORKER), "markdown_full", str(path)]
         else:
             first, last = pr
-            code = r"""
-import sys, pymupdf
-src, a, b = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-doc = pymupdf.open(src)
-parts = []
-for i in range(a - 1, b):
-    if i < 0 or i >= len(doc):
-        continue
-    parts.append(f"## Page {i+1}\n\n")
-    parts.append(doc[i].get_text("text") or "")
-print("".join(parts))
-"""
-            r = run([str(VENV_PY), "-c", code, str(path), str(first), str(last)])
+            cmd = [
+                str(VENV_PY),
+                str(_DIGITAL_WORKER),
+                "markdown_pages",
+                str(path),
+                str(first),
+                str(last),
+            ]
     else:
         if pr is None:
-            code = (
-                "import sys, pymupdf\n"
-                "d=pymupdf.open(sys.argv[1])\n"
-                "print('\\n\\n'.join(p.get_text('text') or '' for p in d))\n"
-            )
-            r = run([str(VENV_PY), "-c", code, str(path)])
+            cmd = [str(VENV_PY), str(_DIGITAL_WORKER), "text_full", str(path)]
         else:
             first, last = pr
-            code = r"""
-import sys, pymupdf
-src, a, b = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
-doc = pymupdf.open(src)
-chunks = []
-for i in range(a - 1, b):
-    if 0 <= i < len(doc):
-        chunks.append(doc[i].get_text("text") or "")
-print("\n\n".join(chunks))
-"""
-            r = run([str(VENV_PY), "-c", code, str(path), str(first), str(last)])
+            cmd = [
+                str(VENV_PY),
+                str(_DIGITAL_WORKER),
+                "text_pages",
+                str(path),
+                str(first),
+                str(last),
+            ]
+    r = run(cmd)
     if r.returncode != 0:
         raise SystemExit(r.stderr or "extract failed")
     return r.stdout
-
-
-def extract_marker(path: Path, out_dir: Path | None, pages: str | None) -> str:
-    if not MARKER.is_file():
-        raise SystemExit(f"marker missing: {MARKER}")
-    dest = out_dir or (ROOT / "smoke" / "marker" / path.stem)
-    dest.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        str(MARKER),
-        str(path),
-        "--output_dir",
-        str(dest),
-        "--output_format",
-        "markdown",
-        "--mode",
-        "fast",  # no Docker/nvidia OCI required on this box
-    ]
-    pr = parse_pages(pages)
-    if pr is not None:
-        first, last = pr
-        cmd.extend(["--page_range", f"{first - 1}-{last - 1}"])
-    r = run(cmd)
-    if r.returncode != 0:
-        raise SystemExit((r.stderr or "") + (r.stdout or "") or "marker failed")
-    candidates = list(dest.rglob("*.md"))
-    if not candidates:
-        raise SystemExit(f"marker produced no markdown under {dest}")
-    md = max(candidates, key=lambda p: p.stat().st_mtime)
-    return md.read_text(encoding="utf-8", errors="replace")
 
 
 def langs_for(mode: str) -> str:
@@ -513,107 +477,6 @@ def ocr_pdf(
     return ocr_pdf_ocrmypdf(path, mode, pages, out_pdf, force=force or frakturish)
 
 
-def ocr_kurrent_image(path: Path) -> str:
-    if not KRAKEN.is_file():
-        raise SystemExit(f"kraken missing: {KRAKEN}")
-    rec = first_existing(KURRENT_MODELS)
-    if rec is None:
-        raise SystemExit(
-            "no Kurrent/hand model found. Expected under "
-            f"{KRAKEN_MODELS} or ~/.local/share/htrmopo/"
-        )
-    seg = first_existing(SEG_MODELS)
-    out_txt = path.with_suffix(".kurrent.txt")
-    if seg is not None:
-        cmd = [
-            str(KRAKEN),
-            "-i",
-            str(path),
-            str(out_txt),
-            "binarize",
-            "segment",
-            "-bl",
-            "-i",
-            str(seg),
-            "ocr",
-            "-m",
-            str(rec),
-        ]
-    else:
-        cmd = [
-            str(KRAKEN),
-            "-i",
-            str(path),
-            str(out_txt),
-            "ocr",
-            "-s",
-            "-m",
-            str(rec),
-        ]
-    r = run(cmd)
-    if r.returncode != 0 or not out_txt.exists() or out_txt.stat().st_size == 0:
-        cmd2 = [
-            str(KRAKEN),
-            "-i",
-            str(path),
-            str(out_txt),
-            "ocr",
-            "-s",
-            "-m",
-            str(rec),
-        ]
-        r2 = run(cmd2)
-        if r2.returncode != 0 and not out_txt.exists():
-            raise SystemExit(
-                (r.stderr or "")
-                + (r.stdout or "")
-                + (r2.stderr or "")
-                + (r2.stdout or "")
-                or "kraken ocr failed"
-            )
-    return out_txt.read_text(encoding="utf-8", errors="replace") if out_txt.exists() else (r.stdout or "")
-
-
-def ocr_kurrent(path: Path, pages: str, render_dir: Path | None) -> str:
-    suf = path.suffix.lower()
-    if suf in IMAGE_EXT:
-        return ocr_kurrent_image(path)
-    if suf != ".pdf":
-        raise SystemExit(f"kurrent needs pdf/image, got {suf}")
-    pr = parse_pages(pages) or (1, 2)
-    first, last = pr
-    dest = render_dir or Path(f"/tmp/pdfx-kurrent/{path.stem}")
-    imgs = render_pages(path, dest, first, last, dpi=300)
-    chunks = []
-    for im in imgs:
-        chunks.append(f"--- {im.name} ---\n{ocr_kurrent_image(im)}")
-    return "\n\n".join(chunks)
-
-
-def paper_extract_dir(pdf: Path) -> Path | None:
-    """If PDF lives under Documents/papers/.../<id>/, return .../<id>/extract/."""
-    parts = pdf.resolve().parts
-    try:
-        parts.index("papers")
-    except ValueError:
-        return None
-    parent = pdf.parent
-    # parts/ sibling of extract for google books layout
-    if parent.name == "parts":
-        return parent.parent / "extract"
-    if parent.name in ("inbox", "papers"):
-        return parent / "extract" / pdf.stem
-    return parent / "extract"
-
-
-def crawl(root: Path) -> list[Path]:
-    files = []
-    for p in sorted(root.rglob("*")):
-        if p.is_file() and p.suffix.lower() in PDF_EXT | IMAGE_EXT:
-            files.append(p)
-    return files
-
-
 def dependency_status() -> dict:
     frk = TESSDATA / "frk.traineddata"
     deu = TESSDATA / "deu.traineddata"
@@ -715,7 +578,7 @@ def enrich_inspect(info: dict) -> dict:
     return info
 
 
-def main() -> None:
+def _build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description="Local PDF/image extract + folder crawl (pdfx)",
         epilog="Infographics/plates: see skill/references/INFOGRAPHICS.md — "
@@ -770,265 +633,152 @@ def main() -> None:
         action="store_true",
         help="with --out, also write *.search.txt (ſ→s fold) for grep; keeps canonical long‑s in --out",
     )
-    args = ap.parse_args()
+    return ap
 
-    if args.path is None:
-        ap.print_help()
-        raise SystemExit(2)
 
-    path = Path(args.path).expanduser().resolve()
-    if not path.exists():
-        raise SystemExit(f"missing: {path}")
+def run_spine_inspect(path: Path) -> None:
+    if path.suffix.lower() != ".pdf":
+        raise SystemExit("--inspect requires a PDF")
+    try:
+        info = enrich_inspect(inspect_pdf(path))
+    except Exception as e:
+        msg = str(e).lower()
+        if "password" in msg or "encrypted" in msg:
+            raise SystemExit("PDF is password-protected / encrypted — unlock first, then retry") from e
+        raise
+    print(json.dumps(info, indent=2))
 
-    edge_flags: list[str] = []
 
-    if args.crawl or path.is_dir():
-        files = crawl(path)
-        print(f"# pdfx {__version__} crawl {path} → {len(files)} files", file=sys.stderr)
-        for f in files:
-            print(f)
-        return
-
-    suf = path.suffix.lower()
-    if suf not in PDF_EXT | IMAGE_EXT and not args.crawl:
-        raise SystemExit(f"unsupported type: {suf or '(none)'} — need PDF or image {sorted(PDF_EXT | IMAGE_EXT)}")
-
-    if args.inspect:
-        if suf != ".pdf":
-            raise SystemExit("--inspect requires a PDF")
-        try:
-            info = enrich_inspect(inspect_pdf(path))
-        except Exception as e:
-            msg = str(e).lower()
-            if "password" in msg or "encrypted" in msg:
-                raise SystemExit("PDF is password-protected / encrypted — unlock first, then retry") from e
-            raise
-        print(json.dumps(info, indent=2))
-        return
-
-    # defaults for page ranges on hand modes
-    pages = args.pages
-    if args.mode in ("kurrent", "handwritten") and pages is None:
-        pages = "1-2"
-        edge_flags.append("default_pages_1-2")
-
-    info: dict | None = None
+def run_spine_image(args, path: Path, edge_flags: list[str]) -> str:
     mode_requested = args.mode
+    if mode_requested == "digital":
+        edge_flags.append("image_forced_ocr")
+        print("# warn: image has no digital text layer → OCR", file=sys.stderr)
+    mode = "fraktur" if mode_requested in ("fraktur", "old-german", "auto") else "scan"
+    if mode_requested == "auto":
+        mode = "scan"
+    require_frk(mode)
+    engine_eff = "tesseract-image"
+    print_mode_header(
+        mode_requested=mode_requested,
+        mode_effective=mode,
+        engine=engine_eff,
+        info=None,
+        path=path,
+        pages="1",
+        dpi=args.dpi,
+        edge_flags=edge_flags,
+    )
+    return ocr_image(path, "fraktur" if mode == "fraktur" else "scan")
+
+
+def run_spine_pdf(args, path: Path, pages: str | None, edge_flags: list[str]) -> tuple[str, dict]:
+    try:
+        info = enrich_inspect(inspect_pdf(path))
+    except Exception as e:
+        msg = str(e).lower()
+        if "password" in msg or "encrypted" in msg:
+            raise SystemExit("PDF is password-protected / encrypted — unlock first, then retry") from e
+        raise
+    edge_flags.extend(info.get("edge_flags") or [])
+    n_pages = int(info.get("pages") or 0)
+    if n_pages == 0:
+        raise SystemExit("PDF has 0 pages")
+    # page range validation
+    pr = parse_pages(pages)
+    if pr is not None:
+        a, b = pr
+        if a > n_pages or b < 1:
+            raise SystemExit(f"--pages {pages} outside document (1–{n_pages})")
+        if a < 1 or b > n_pages:
+            edge_flags.append("pages_clamped")
+            print(f"# warn: clamping --pages to 1–{n_pages}", file=sys.stderr)
+            a, b = max(1, a), min(n_pages, b)
+            pages = f"{a}-{b}"
+
     mode = args.mode
-    engine_eff = args.engine
-
-    if args.mode == "handwritten":
-        pr = parse_pages(pages) or (1, 2)
-        first, last = pr
-        dest = Path(args.render_dir or f"/tmp/pdfx-hand/{path.stem}")
-        if suf == ".pdf":
-            info = enrich_inspect(inspect_pdf(path))
-            print_mode_header(
-                mode_requested=mode_requested,
-                mode_effective="handwritten-vision",
-                engine="render",
-                info=info,
-                path=path,
-                pages=pages,
-                dpi=args.dpi,
-                edge_flags=edge_flags,
-            )
-            imgs = render_pages(path, dest, first, last)
+    if mode == "auto":
+        rec = info.get("recommend") or "digital"
+        tq = (info.get("text_quality") or {}).get("label")
+        if args.ocr:
+            mode = "fraktur" if tq in ("garbled", "mixed", "empty") else "scan"
+        elif rec == "digital":
+            mode = "digital"
+        elif rec in ("ocr-fraktur-or-scan", "spot-check-then-ocr"):
+            mode = "fraktur"
         else:
-            dest.mkdir(parents=True, exist_ok=True)
-            imgs = [path]
-            print_mode_header(
-                mode_requested=mode_requested,
-                mode_effective="handwritten-vision",
-                engine="render",
-                info=None,
-                path=path,
-                pages=pages,
-                dpi=args.dpi,
-                edge_flags=edge_flags,
-            )
-        print("HANDWRITTEN fallback (vision)")
-        print("For Kurrent engine use: pdfx FILE --mode kurrent")
-        print("Vision PNGs:")
-        for im in imgs:
-            print(im)
-        return
-
-    if args.mode == "marker":
-        print_mode_header(
-            mode_requested=mode_requested,
-            mode_effective="marker",
-            engine="marker_single",
-            info=None,
-            path=path,
-            pages=pages,
-            dpi=args.dpi,
-            edge_flags=edge_flags,
-        )
-        out_dir = None
-        if args.index_paper:
-            ped = paper_extract_dir(path)
-            if ped:
-                out_dir = ped / "marker_raw"
-        text = extract_marker(path, out_dir, pages)
-        if args.out is None and args.index_paper:
-            ped = paper_extract_dir(path)
-            if ped:
-                ped.mkdir(parents=True, exist_ok=True)
-                (ped / "marker.md").write_text(text, encoding="utf-8")
-                print(f"indexed {ped / 'marker.md'} ({len(text)} chars)")
-                return
-    elif args.mode in ("kurrent",):
-        if first_existing(KURRENT_MODELS) is None:
-            raise SystemExit(
-                "no Kurrent/hand model found.\n"
-                f"  Looked under: {KRAKEN_MODELS} and ~/.local/share/htrmopo/\n"
-                "  Place kraken_german_finetuned.mlmodel (or set PDFX_KRAKEN_MODELS)."
-            )
-        print_mode_header(
-            mode_requested=mode_requested,
-            mode_effective="kurrent",
-            engine="kraken",
-            info=None,
-            path=path,
-            pages=pages or "1-2",
-            dpi=args.dpi,
-            edge_flags=edge_flags,
-        )
-        text = ocr_kurrent(path, pages or "1-2", Path(args.render_dir) if args.render_dir else None)
-        if args.index_paper:
-            ped = paper_extract_dir(path)
-            if ped:
-                ped.mkdir(parents=True, exist_ok=True)
-                (ped / "kurrent.txt").write_text(text, encoding="utf-8")
-    elif suf in IMAGE_EXT:
-        if mode_requested == "digital":
-            edge_flags.append("image_forced_ocr")
-            print("# warn: image has no digital text layer → OCR", file=sys.stderr)
-        mode = "fraktur" if mode_requested in ("fraktur", "old-german", "auto") else "scan"
-        if mode_requested == "auto":
             mode = "scan"
-        require_frk(mode)
-        engine_eff = "tesseract-image"
-        print_mode_header(
-            mode_requested=mode_requested,
-            mode_effective=mode,
-            engine=engine_eff,
-            info=None,
-            path=path,
-            pages="1",
-            dpi=args.dpi,
-            edge_flags=edge_flags,
-        )
-        text = ocr_image(path, "fraktur" if mode == "fraktur" else "scan")
-    elif suf == ".pdf":
-        try:
-            info = enrich_inspect(inspect_pdf(path))
-        except Exception as e:
-            msg = str(e).lower()
-            if "password" in msg or "encrypted" in msg:
-                raise SystemExit("PDF is password-protected / encrypted — unlock first, then retry") from e
-            raise
-        edge_flags.extend(info.get("edge_flags") or [])
-        n_pages = int(info.get("pages") or 0)
-        if n_pages == 0:
-            raise SystemExit("PDF has 0 pages")
-        # page range validation
-        pr = parse_pages(pages)
-        if pr is not None:
-            a, b = pr
-            if a > n_pages or b < 1:
-                raise SystemExit(f"--pages {pages} outside document (1–{n_pages})")
-            if a < 1 or b > n_pages:
-                edge_flags.append("pages_clamped")
-                print(f"# warn: clamping --pages to 1–{n_pages}", file=sys.stderr)
-                a, b = max(1, a), min(n_pages, b)
-                pages = f"{a}-{b}"
 
-        mode = args.mode
-        if mode == "auto":
-            rec = info.get("recommend") or "digital"
-            tq = (info.get("text_quality") or {}).get("label")
-            if args.ocr:
-                mode = "fraktur" if tq in ("garbled", "mixed", "empty") else "scan"
-            elif rec == "digital":
-                mode = "digital"
-            elif rec in ("ocr-fraktur-or-scan", "spot-check-then-ocr"):
-                mode = "fraktur"
-            else:
-                mode = "scan"
-
-        if mode == "digital" and (info.get("text_quality") or {}).get("label") == "garbled":
-            if args.mode == "digital":
-                edge_flags.append("forced_digital_on_garbled")
-                print(
-                    "# warn: forced --mode digital on garbled layer (Google Fraktur trap). "
-                    "Prefer --mode fraktur.",
-                    file=sys.stderr,
-                )
-            elif args.mode == "auto":
-                pass  # already routed
-
-        if mode in ("fraktur", "old-german", "scan") and pages is None and n_pages > 40:
-            edge_flags.append("large_pdf_no_pages")
+    if mode == "digital" and (info.get("text_quality") or {}).get("label") == "garbled":
+        if args.mode == "digital":
+            edge_flags.append("forced_digital_on_garbled")
             print(
-                f"# warn: {n_pages} pages without --pages — consider chunks "
-                f"(pdfx-batch-fraktur, 15–20 pp).",
+                "# warn: forced --mode digital on garbled layer (Google Fraktur trap). "
+                "Prefer --mode fraktur.",
                 file=sys.stderr,
             )
+        elif args.mode == "auto":
+            pass  # already routed
 
-        require_frk(mode)
-        if mode == "digital" and not args.ocr:
-            engine_eff = "pymupdf"
-        else:
-            engine_eff = resolve_engine(mode, args.engine, edge_flags)
-
-        print_mode_header(
-            mode_requested=mode_requested,
-            mode_effective=mode,
-            engine=engine_eff,
-            info=info,
-            path=path,
-            pages=pages,
-            dpi=args.dpi,
-            edge_flags=edge_flags,
+    if mode in ("fraktur", "old-german", "scan") and pages is None and n_pages > 40:
+        edge_flags.append("large_pdf_no_pages")
+        print(
+            f"# warn: {n_pages} pages without --pages — consider chunks "
+            f"(pdfx-batch-fraktur, 15–20 pp).",
+            file=sys.stderr,
         )
 
-        if mode == "digital" and not args.ocr:
-            text = extract_digital(path, markdown=args.markdown, pages=pages)
-            tq = text_quality(text[:4000])
-            if tq["label"] == "garbled":
-                print(
-                    f"# warn: digital extract looks {tq['label']} "
-                    f"(score={tq['score']}). Prefer: pdfx FILE --mode fraktur --pages …",
-                    file=sys.stderr,
-                )
-            if args.index_paper and args.markdown:
-                ped = paper_extract_dir(path)
-                if ped:
-                    ped.mkdir(parents=True, exist_ok=True)
-                    (ped / "pymupdf.md").write_text(text, encoding="utf-8")
-        else:
-            force = bool(args.ocr) or mode in ("fraktur", "old-german", "scan")
-            text = ocr_pdf(
-                path,
-                mode,
-                pages,
-                None,
-                force=force,
-                render_dir=Path(args.render_dir) if args.render_dir else None,
-                engine=engine_eff if engine_eff in ("auto", "images", "ocrmypdf") else "ocrmypdf",
-                dpi=args.dpi,
-            )
-            if args.index_paper:
-                ped = paper_extract_dir(path)
-                if ped:
-                    ped.mkdir(parents=True, exist_ok=True)
-                    name = "fraktur.txt" if mode in ("fraktur", "old-german") else "ocr.txt"
-                    (ped / name).write_text(text, encoding="utf-8")
+    require_frk(mode)
+    if mode == "digital" and not args.ocr:
+        engine_eff = "pymupdf"
     else:
-        raise SystemExit(f"unsupported: {suf}")
+        engine_eff = resolve_engine(mode, args.engine, edge_flags)
 
+    print_mode_header(
+        mode_requested=args.mode,
+        mode_effective=mode,
+        engine=engine_eff,
+        info=info,
+        path=path,
+        pages=pages,
+        dpi=args.dpi,
+        edge_flags=edge_flags,
+    )
+
+    if mode == "digital" and not args.ocr:
+        text = extract_digital(path, markdown=args.markdown, pages=pages)
+        tq = text_quality(text[:4000])
+        if tq["label"] == "garbled":
+            print(
+                f"# warn: digital extract looks {tq['label']} "
+                f"(score={tq['score']}). Prefer: pdfx FILE --mode fraktur --pages …",
+                file=sys.stderr,
+            )
+        if args.index_paper and args.markdown:
+            from pdfx_sidecars import write_index_paper
+
+            write_index_paper(path, text, "pymupdf.md")
+    else:
+        force = bool(args.ocr) or mode in ("fraktur", "old-german", "scan")
+        text = ocr_pdf(
+            path,
+            mode,
+            pages,
+            None,
+            force=force,
+            render_dir=Path(args.render_dir) if args.render_dir else None,
+            engine=engine_eff if engine_eff in ("auto", "images", "ocrmypdf") else "ocrmypdf",
+            dpi=args.dpi,
+        )
+        if args.index_paper:
+            from pdfx_sidecars import write_index_paper
+
+            name = "fraktur.txt" if mode in ("fraktur", "old-german") else "ocr.txt"
+            write_index_paper(path, text, name)
+    return text, info
+
+
+def write_spine_outputs(args, path: Path, text: str, info: dict | None) -> None:
     if args.out:
         outp = Path(args.out)
         outp.parent.mkdir(parents=True, exist_ok=True)
@@ -1037,7 +787,7 @@ def main() -> None:
         if args.search_sidecar:
             # diplomatic policy: canonical keeps ſ; search folds
             side = outp.with_name(outp.stem + ".search" + outp.suffix)
-            folded = text.replace("ſ", "s").replace("⸗", "-").replace("\u00ad", "")
+            folded = fold_for_search(text)
             side.write_text(folded, encoding="utf-8")
             print(f"wrote search sidecar {side} (ſ→s)")
         if args.plates_sidecar and info is not None:
@@ -1058,6 +808,85 @@ def main() -> None:
             print(f"wrote plates sidecar {side}")
     else:
         sys.stdout.write(text)
+
+
+def main() -> None:
+    """Thin dispatcher: spine (inspect/digital/OCR/fold) vs sidecars.
+
+    Spine: inspect, digital extract, fraktur/scan OCR, search fold, plates.
+    Sidecars (pdfx_sidecars.py): marker, kurrent, handwritten dump, crawl,
+    --index-paper writes. Argparse surface is unchanged.
+    """
+    # python pdfx.py → module is __main__; sidecars import pdfx
+    sys.modules.setdefault("pdfx", sys.modules[__name__])
+    ap = _build_parser()
+    args = ap.parse_args()
+
+    if args.path is None:
+        ap.print_help()
+        raise SystemExit(2)
+
+    path = Path(args.path).expanduser().resolve()
+    if not path.exists():
+        raise SystemExit(f"missing: {path}")
+
+    edge_flags: list[str] = []
+
+    # --- sidecar: crawl ---
+    if args.crawl or path.is_dir():
+        from pdfx_sidecars import run_crawl
+
+        run_crawl(path)
+        return
+
+    suf = path.suffix.lower()
+    if suf not in PDF_EXT | IMAGE_EXT and not args.crawl:
+        raise SystemExit(f"unsupported type: {suf or '(none)'} — need PDF or image {sorted(PDF_EXT | IMAGE_EXT)}")
+
+    # --- spine: inspect ---
+    if args.inspect:
+        run_spine_inspect(path)
+        return
+
+    # defaults for page ranges on hand modes
+    pages = args.pages
+    if args.mode in ("kurrent", "handwritten") and pages is None:
+        pages = "1-2"
+        edge_flags.append("default_pages_1-2")
+
+    # --- sidecars: handwritten / marker / kurrent ---
+    if args.mode == "handwritten":
+        from pdfx_sidecars import run_handwritten
+
+        run_handwritten(args, path, suf, pages, edge_flags)
+        return
+
+    if args.mode == "marker":
+        from pdfx_sidecars import run_marker
+
+        text, done = run_marker(args, path, pages, edge_flags)
+        if done:
+            return
+        write_spine_outputs(args, path, text, info=None)
+        return
+
+    if args.mode == "kurrent":
+        from pdfx_sidecars import run_kurrent
+
+        text = run_kurrent(args, path, pages, edge_flags)
+        write_spine_outputs(args, path, text, info=None)
+        return
+
+    # --- spine: image OCR or PDF inspect → digital / Fraktur-scan ---
+    if suf in IMAGE_EXT:
+        text = run_spine_image(args, path, edge_flags)
+        info = None
+    elif suf == ".pdf":
+        text, info = run_spine_pdf(args, path, pages, edge_flags)
+    else:
+        raise SystemExit(f"unsupported: {suf}")
+
+    write_spine_outputs(args, path, text, info)
 
 
 if __name__ == "__main__":
